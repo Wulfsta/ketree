@@ -6,6 +6,8 @@ description = "A tree representing a symbolic expression that can be created wit
 license = "MIT/Apache-2.0"
 keywords = [ "symbolic-expression", "s-expression", "tree", "lisp" ]
 readme = "README.md"
+homepage = "https://github.com/Wulfsta/ketree"
+repository = "https://github.com/Wulfsta/ketree"
 
 [dependencies]
 ketos = "0.10"
