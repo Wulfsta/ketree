@@ -62,8 +62,8 @@ impl TreeBuilder {
         self.epilogue = s.to_string();
     }
 
-    /// Takes a Box containing a ketos::ModuleLoader and a name to look for in the file that is
-    ///  assigned to the tree using define in the body of code.
+    /// Takes a Box containing a ketos::ModuleLoader and a name to look for that the tree 
+    ///  is assigned to using define in the body of Ketos code.
     ///
     /// Returns a tuple containing the Tree and a HashSet of variable names.
     pub fn use_box_and_name<T: 'static + Clone + Debug, B: 'static + ModuleLoader>(&self, cml: Box<B>, tree_name: &str) -> Result<(Tree<T>, HashSet<String>), Error> {
