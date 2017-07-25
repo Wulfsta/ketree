@@ -62,16 +62,43 @@ impl TreeBuilder {
         self.epilogue = s.to_string();
     }
 
-    /// Takes a Box containing a ketos::ModuleLoader and a name to look for that the tree 
-    ///  is assigned to using define in the body of Ketos code.
+    /// Consumes a Box containing a ketos::ModuleLoader and takes a name to look for that the tree
+    ///  is assigned to (using define in the body of Ketos code).
     ///
     /// Returns a tuple containing the Tree and a HashSet of variable names.
-    pub fn use_box_and_name<T: 'static + Clone + Debug, B: 'static + ModuleLoader>(&self, cml: Box<B>, tree_name: &str) -> Result<(Tree<T>, HashSet<String>), Error> {
+    pub fn use_box_and_name<T, B>(&self, cml: Box<B>, tree_name: &str) -> Result<(Tree<T>, HashSet<String>), Error> 
+        where T: 'static + Clone + Debug,
+              B: 'static + ModuleLoader
+    {
+        self.use_opts(cml, None, tree_name)
+    }
+
+    /// Consumes a Box containing a ketos::ModuleLoader, consumes a HashSet<String> (to allow
+    ///  for the selection of the hashing algorithm), and takes a name to look for that the tree
+    ///  is assigned to (using define in the body of Ketos code).
+    ///
+    /// Returns a tuple containing the Tree and the consumed HashSet filled with variable names.
+    pub fn use_box_set_and_name<T, B>(&self, cml: Box<B>, var_set: HashSet<String>, tree_name: &str) -> Result<(Tree<T>, HashSet<String>), Error> 
+        where T: 'static + Clone + Debug,
+              B: 'static + ModuleLoader
+    {
+        self.use_opts(cml, Some(var_set), tree_name)
+    }
+
+    // Helper function.
+    fn use_opts<T, B>(&self, cml: Box<B>, var_set: Option<HashSet<String>>, tree_name: &str) -> Result<(Tree<T>, HashSet<String>), Error> 
+        where T: 'static + Clone + Debug,
+              B: 'static + ModuleLoader
+    {
         let result: (Tree<T>, HashSet<String>);
         {
             let interp = Interpreter::with_loader(cml);
 
-            let varcont = Rc::new(RefCell::new(HashSet::<String>::new()));
+            let vs = match var_set {
+                Some(vset) => vset,
+                None => HashSet::<String>::new(),
+            };
+            let varcont = Rc::new(RefCell::new(vs));
             let varcontc = varcont.clone();
 
             let var_fn = move |s: &str| -> Result<Tree<T>, Error> {
