@@ -8,7 +8,7 @@ Add the following to `Cargo.toml`:
 
 ```toml
 [depenencies]
-ketree = "0.1.2"
+ketree = "0.1.3"
 ```
 
 Then, to the crate root, add:
