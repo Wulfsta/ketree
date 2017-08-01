@@ -32,12 +32,16 @@ fn test_treebuilder() {
 
     assert_eq!(Some(&"x".to_string()), result.1.get("x"));
 
+    //for i in result.0.post_iter() {
+    //    println!("{:?}\n", i);
+    //}
+
     result.0.reduce();
 
     let mut vars = HashMap::<String, f32>::with_capacity(1);
     vars.insert("x".to_string(), 2.0);
 
-    assert_eq!(7.0, result.0.accumulate(&vars).unwrap());
+    assert_eq!(6.0, result.0.accumulate(&vars).unwrap());
 }
 
 type NumT = f32;
@@ -74,6 +78,7 @@ fn load_mod(scope: &Scope) -> Module {
 
     ketos_fn!{ scope => "con" => fn con(c: NumT) -> Tree<NumT> }
     ketos_fn!{ scope => "plus" => fn plus(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Tree<NumT> }
+    ketos_fn!{ scope => "mult" => fn mult(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Tree<NumT> }
 
     ModuleBuilder::new("treebuilder", scope.clone()).finish()
 }
@@ -89,6 +94,17 @@ fn plus(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Result<Tree<NumT>, Error> {
     }
 
     let mut bt = Tree::new(Expression::Operator(int_plus));
+    bt.link(vec![lhs.clone(), rhs.clone()]);
+    Ok(bt)
+}
+
+fn mult(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Result<Tree<NumT>, Error> {
+
+    fn int_mult(v: Vec<NumT>) -> NumT {
+        v.iter().fold(1.0, |m, i| m * i)
+    }
+
+    let mut bt = Tree::new(Expression::Operator(int_mult));
     bt.link(vec![lhs.clone(), rhs.clone()]);
     Ok(bt)
 }

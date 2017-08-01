@@ -207,10 +207,9 @@ impl<T: 'static + Clone + Debug> Tree<T> {
         }
     }
 
-    // An internal helper, used in reduce.
-    fn data(&self) -> &Expression<T> {
-       &self.data
-    }
+    //pub fn accumulate_experimental(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
+    //
+    //}
 
     /// Evaluates the tree with the provided map of variables.
     ///
@@ -256,10 +255,32 @@ impl<T: 'static + Clone + Debug> Tree<T> {
         self.data.clone()
     }
 
-    /// Clones and returns contained links.
-    pub fn clone_links(&self) -> Option<Vec<Tree<T>>> {
+    /// Clones and returns contained children.
+    pub fn clone_children(&self) -> Option<Vec<Tree<T>>> {
         let ref holder = *self.links;
         holder.clone()
+    }
+
+    /// Returns a reference to contained data.
+    pub fn data(&self) -> &Expression<T> {
+        &self.data
+    }
+
+    /// Returns a reference to contained children.
+    pub fn children(&self) -> &Option<Vec<Tree<T>>> {
+        &*self.links
+    }
+
+    /// Returns a TreePostIter for the tree.
+    pub fn post_iter(&self) -> TreePostIter<T> {
+        let mut ps = Vec::<usize>::new();
+        ps.push(0);
+        let mut ts = Vec::<&Tree<T>>::new();
+        ts.push(self);
+        TreePostIter {
+            pos_stack: ps,
+            tree_stack: ts,
+        }
     }
 }
 
@@ -267,6 +288,53 @@ impl<T: 'static + Clone + Debug> From<Tree<T>> for Value {
     /// From for ketos::Value.
     fn from(v: Tree<T>) -> Self {
         Value::new_foreign(v)
+    }
+}
+
+/// An Iterator that iterates through the tree in post-order.
+pub struct TreePostIter<'a, T: 'static + Clone + Debug> {
+    pos_stack: Vec<usize>,
+    tree_stack: Vec<&'a Tree<T>>,
+}
+
+impl<'a, T: 'static + Clone + Debug> Iterator for TreePostIter<'a, T> {
+    type Item = &'a Tree<T>;
+
+    // index magic
+    /// Returns a reference to the next vertex of the tree in post-order.
+    fn next(&mut self) -> Option<&'a Tree<T>> {
+        loop {
+            let minks = self.tree_stack[self.tree_stack.len() - 1].children();
+            let clen = || -> usize {
+                match minks {
+                    &Some(ref vc) => vc.len(),
+                    &None => 0,
+                }
+            };
+            if self.pos_stack[self.pos_stack.len() - 1] < clen() {
+                if let &Some(ref vc) = self.tree_stack[self.tree_stack.len() - 1].children() {
+                    self.tree_stack.push(&vc[self.pos_stack[self.pos_stack.len() - 1]]);
+                    self.pos_stack.push(0);
+                    continue;
+                }
+                else {
+                    panic!("Iteration failed unexpectedly");
+                }
+            }
+            else if self.pos_stack[self.pos_stack.len() - 1] == clen() {
+                let s = self.pos_stack.len() - 1;
+                self.pos_stack[s] += 1;
+                break;
+            }
+            self.tree_stack.pop();
+            if 0 == self.tree_stack.len() {
+                return None;
+            }
+            self.pos_stack.pop();
+            let s = self.pos_stack.len() - 1;
+            self.pos_stack[s] += 1;
+        }
+        Some(self.tree_stack[self.tree_stack.len() - 1])
     }
 }
 
