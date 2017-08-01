@@ -32,9 +32,9 @@ fn test_treebuilder() {
 
     assert_eq!(Some(&"x".to_string()), result.1.get("x"));
 
-    //for i in result.0.post_iter() {
-    //    println!("{:?}\n", i);
-    //}
+    for i in result.0.post_iter() {
+        println!("{:?}\n", i);
+    }
 
     result.0.reduce();
 
@@ -42,6 +42,7 @@ fn test_treebuilder() {
     vars.insert("x".to_string(), 2.0);
 
     assert_eq!(6.0, result.0.accumulate(&vars).unwrap());
+    assert_eq!(6.0, result.0.accumulate_recurse(&vars).unwrap());
 }
 
 type NumT = f32;

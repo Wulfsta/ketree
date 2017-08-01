@@ -162,8 +162,10 @@ impl<T: 'static + Clone + Debug> Tree<T> {
         Tree { data: ex, links: OptionVecWrapper::<Tree<T>>::wrap(None) }
     }
     
-    /// Reduces the complexity of the tree by evaluating operators with branches that are 
-    ///  constants.
+    /// Reduces the complexity of the tree using recursion by evaluating operators
+    ///  with branches that are constants.
+    ///
+    /// This method is limited by the depth of the machine's recursive stack.
     pub fn reduce(&mut self) {
         let mut all_const = true;
         if let &Expression::Operator(_) = &self.data {
@@ -173,10 +175,10 @@ impl<T: 'static + Clone + Debug> Tree<T> {
                         k.reduce();
                     }
                     for k in kinks.iter() {
-                        if let &Expression::Operator(_) = k.data() {
+                        if let &Expression::Operator(_) = &k.data {
                             all_const = false;
                             break;
-                        } else if let &Expression::Variable(_) = k.data() {
+                        } else if let &Expression::Variable(_) = &k.data {
                             all_const = false;
                             break;
                         }
@@ -207,14 +209,38 @@ impl<T: 'static + Clone + Debug> Tree<T> {
         }
     }
 
-    //pub fn accumulate_experimental(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
-    //
-    //}
-
     /// Evaluates the tree with the provided map of variables.
     ///
     /// 'vars' should be any HashMap that maps Variables in the tree to values.
     pub fn accumulate(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
+        let mut yeta = Vec::<T>::new();
+        for i in self.post_iter() {
+            match &i.data {
+                &Expression::Operator(ref f) => {
+                    let minks = match i.children() {
+                        &Some(ref m) => m,
+                        &None => { panic!("Operator found no operands") },
+                    };
+                    let s = yeta.len() - minks.len();
+                    let eta = yeta.split_off(s);
+                    yeta.push(f(eta));
+                },
+                &Expression::Variable(ref v) => match vars.get(v) {
+                    Some(val) => yeta.push(val.clone()),
+                    None => { return Err(TreeError::create(TreeErrorKind::VarNotFound)); },
+                },
+                &Expression::Constant(ref c) => yeta.push(c.clone()),
+            };
+        }
+        Ok(yeta.pop().unwrap())
+    }
+
+    /// Evaluates the tree using recursion with the provided map of variables.
+    ///
+    /// 'vars' should be any HashMap that maps Variables in the tree to values.
+    ///
+    /// This method is limited by the depth of the machine's recursive stack.
+    pub fn accumulate_recurse(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
         match &self.data {
             &Expression::Operator(ref f) => match *self.links {
                 Some(ref kinks) => {
@@ -248,17 +274,6 @@ impl<T: 'static + Clone + Debug> Tree<T> {
     /// Links the provided Vector of Trees as branches to self.
     pub fn link(&mut self, b: Vec<Tree<T>>) {
         self.links = OptionVecWrapper::wrap(Some(b));
-    }
-
-    /// Clones and returns contained data.
-    pub fn clone_data(&self) -> Expression<T> {
-        self.data.clone()
-    }
-
-    /// Clones and returns contained children.
-    pub fn clone_children(&self) -> Option<Vec<Tree<T>>> {
-        let ref holder = *self.links;
-        holder.clone()
     }
 
     /// Returns a reference to contained data.
