@@ -16,6 +16,8 @@ use std::cell::RefCell;
 use tree::{
     Tree,
     Expression,
+};
+use treeerror::{
     TreeError,
     TreeErrorKind,
 };

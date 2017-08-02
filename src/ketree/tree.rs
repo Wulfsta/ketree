@@ -9,11 +9,11 @@ use ketos::{Value,
             ForeignValue,
             ExecError,
             };
-use std::fmt::{self, Debug, Display};
+use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::collections::HashMap;
-use std::error;
+use treeerror::{TreeError, TreeErrorKind};
 
 // A struct that wraps Option<Vec<T>> with Ketos traits implemented.
 #[derive(Clone, Debug)]
@@ -105,47 +105,6 @@ impl<T: 'static + Clone + Debug> From<Expression<T>> for Value {
     /// From for ketos::Value.
     fn from(v: Expression<T>) -> Self {
         Value::new_foreign(v)
-    }
-}
-
-/// Simple Error types for use with Tree.
-#[derive(Debug)]
-pub struct TreeError {
-    kind: TreeErrorKind,
-    message: String,
-}
-
-impl TreeError {
-    /// Convenience function to create an error.
-    pub fn create(tek: TreeErrorKind) -> TreeError {
-        match tek {
-            TreeErrorKind::VarNotFound => TreeError {
-                kind: TreeErrorKind::VarNotFound,
-                message: "Found variable in tree but not map".to_string(),
-            },
-            TreeErrorKind::TreeNotInScope => TreeError {
-                kind: TreeErrorKind::TreeNotInScope,
-                message: "Tree not defined in scope - use (define $name $tree)".to_string(),
-            },
-        }
-    }
-}
-
-impl Display for TreeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-#[derive(Debug)]
-pub enum TreeErrorKind {
-    VarNotFound,
-    TreeNotInScope,
-}
-
-impl error::Error for TreeError {
-    fn description(&self) -> &str {
-        &self.message
     }
 }
 
