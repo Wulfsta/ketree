@@ -108,73 +108,136 @@ impl<T: 'static + Clone + Debug> From<Expression<T>> for Value {
     }
 }
 
-/// A Tree that represents a symbolic expression that can be constructed with Ketos.
+// A backend that represents a symbolic expression.
 #[derive(Clone, Debug, ForeignValue, FromValueClone, FromValueRef, StructValue)]
-pub struct Tree<T: 'static + Clone + Debug> {
+struct TreeBackend<T: 'static + Clone + Debug> {
     data: Expression<T>,
     links: OptionVecWrapper<Tree<T>>,
 }
 
-impl<T: 'static + Clone + Debug> Tree<T> {
-    /// Constructor to create a Tree vertex with data.
-    pub fn new(ex: Expression<T>) -> Tree<T> {
-        Tree { data: ex, links: OptionVecWrapper::<Tree<T>>::wrap(None) }
+impl<T: 'static + Clone + Debug> TreeBackend<T> {
+    // Constructor to create a Tree vertex with data.
+    fn new(ex: Expression<T>) -> TreeBackend<T> {
+        TreeBackend { data: ex, links: OptionVecWrapper::<Tree<T>>::wrap(None) }
     }
     
-    /// Reduces the complexity of the tree using recursion by evaluating operators
-    ///  with branches that are constants.
-    ///
-    /// This method is limited by the depth of the machine's recursive stack.
-    pub fn reduce(&mut self) {
-        let mut all_const = true;
-        if let &Expression::Operator(_) = &self.data {
-            match *self.links {
-                Some(ref mut kinks) => {
-                    for k in kinks.iter_mut() {
-                        k.reduce();
-                    }
-                    for k in kinks.iter() {
-                        if let &Expression::Operator(_) = &k.data {
-                            all_const = false;
-                            break;
-                        } else if let &Expression::Variable(_) = &k.data {
-                            all_const = false;
-                            break;
+    // Links the provided Vector of Trees as branches to self.
+    fn link(&mut self, b: Vec<Tree<T>>) {
+        self.links = OptionVecWrapper::wrap(Some(b));
+    }
+
+    // Returns a reference to contained data.
+    fn data(&self) -> &Expression<T> {
+        &self.data
+    }
+
+    // Returns a reference to contained children.
+    fn children(&self) -> &Option<Vec<Tree<T>>> {
+        &self.links
+    }
+}
+
+impl<T: 'static + Clone + Debug> From<TreeBackend<T>> for Value {
+    // From for ketos::Value.
+    fn from(v: TreeBackend<T>) -> Self {
+        Value::new_foreign(v)
+    }
+}
+
+// A struct that wraps Rc<T> with Ketos traits implemented.
+#[derive(Clone, Debug)]
+struct RcWrapper<T: 'static + Sized + Clone + Debug>(Rc<T>);
+
+// Simple constructor.
+impl<T: 'static + Sized + Clone + Debug> RcWrapper<T> {
+    fn wrap(w: Rc<T>) -> RcWrapper<T> {
+        RcWrapper(w)
+    }
+}
+
+// Simple Deref.
+impl<T: 'static + Sized + Clone + Debug> Deref for RcWrapper<T> {
+    type Target = Rc<T>;
+
+    fn deref(&self) -> &Rc<T> {
+        &self.0
+    }
+}
+
+// Simple DerefMut.
+impl<T: 'static + Sized + Clone + Debug> DerefMut for RcWrapper<T> {
+    fn deref_mut(&mut self) -> &mut Rc<T> {
+        &mut self.0
+    }
+}
+
+// From for ketos::Value.
+impl<T: 'static + Sized + Clone + Debug> From<RcWrapper<T>> for Value {
+    fn from(v: RcWrapper<T>) -> Self {
+        Value::new_foreign(v)
+    }
+}
+
+// Simple ketos::ForeignValue.
+impl<T: 'static + Sized + Clone + Debug> ForeignValue for RcWrapper<T> {
+    fn type_name(&self) -> &'static str { "RcWrapper" }
+}
+
+// Simple ketos::FromValue.
+impl<T: 'static + Sized + Clone + Debug> FromValue for RcWrapper<T> {
+    fn from_value(v: Value) -> Result<Self, ExecError> {
+        match v {
+            Value::Foreign(fv) => {
+                match ForeignValue::downcast_rc(fv) {
+                    Ok(v) => {
+                        match Rc::try_unwrap(v) {
+                            Ok(v) => Ok(v),
+                            Err(rc) => Ok((*rc).clone())
                         }
                     }
-                },
-                None => { panic!("Operator found no operands") },
-            };
-        } else {
-            all_const = false;
-        }
-        if all_const {
-            self.data = Expression::Constant(self.reduce_helper());
-            self.links = OptionVecWrapper::<Tree<T>>::wrap(None);
+                    Err(rc) => {
+                        Err(ExecError::expected("RcWrapper", &Value::Foreign(rc)))
+                    }
+                }
+            }
+            ref v => Err(ExecError::expected("RcWrapper", v))
         }
     }
+}
 
-    // A helper for reduce.
-    fn reduce_helper(&self) -> T {
-        match &self.data {
-            &Expression::Operator(ref f) => match *self.links {
-                Some(ref kinks) => {
-                    f(kinks.iter().map(|n| n.reduce_helper()).collect())
-                },
-                None => { panic!("Operator found no operands") },
-            },
-            &Expression::Constant(ref c) => c.clone(),
-            _ => { panic!("Found variable when none were expected") },
-        }
+// Simple ketos::FromValueRef
+impl<'value, T: 'static + Sized + Clone + Debug> FromValueRef<'value> for &'value RcWrapper<T> {
+    fn from_value_ref(v: &'value Value) -> Result<Self, ExecError> {
+        if let Value::Foreign(ref fv) = *v {
+            if let Some(v) = fv.downcast_ref() {
+                return Ok(v);
+            }
+         }
+
+        Err(
+            ExecError::expected("RcWrapper", v))
     }
+}
 
+/// A Tree that represents a symbolic expression that can be constructed with Ketos.
+#[derive(Clone, Debug, ForeignValue, FromValueClone, FromValueRef, StructValue)]
+pub struct Tree<T: 'static + Sized + Clone + Debug> {
+    t: RcWrapper<TreeBackend<T>>
+}
+
+impl<T: 'static + Sized + Clone + Debug> Tree<T> {
+    /// Constructor to create a Tree vertex with data.
+    pub fn new(ex: Expression<T>) -> Tree<T> {
+        Tree { t: RcWrapper::wrap(Rc::new(TreeBackend::new(ex))) }
+    }
+    
     /// Evaluates the tree with the provided map of variables.
     ///
     /// 'vars' should be any HashMap that maps Variables in the tree to values.
     pub fn accumulate(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
         let mut yeta = Vec::<T>::new();
         for i in self.post_iter() {
-            match &i.data {
+            match i.data() {
                 &Expression::Operator(ref f) => {
                     let minks = match i.children() {
                         &Some(ref m) => m,
@@ -193,56 +256,20 @@ impl<T: 'static + Clone + Debug> Tree<T> {
         }
         Ok(yeta.pop().unwrap())
     }
-
-    /// Evaluates the tree using recursion with the provided map of variables.
-    ///
-    /// 'vars' should be any HashMap that maps Variables in the tree to values.
-    ///
-    /// This method is limited by the depth of the machine's recursive stack.
-    pub fn accumulate_recurse(&self, vars: &HashMap<String, T>) -> Result<T, TreeError> {
-        match &self.data {
-            &Expression::Operator(ref f) => match *self.links {
-                Some(ref kinks) => {
-                    //f(kinks.iter().map(|n| {
-                    //    match n.accumulate(vars) {
-                    //        Ok(nu) => nu,
-                    //        Err(e) => { return Err(e); }, // Fails due to return from
-                    //    }                                 //  closure; not the outer
-                    //}).collect())                         //  function.
-
-                    let mut minks = Vec::<T>::with_capacity(kinks.capacity());
-                    for k in kinks.iter() {
-                        let u = match k.accumulate(vars) {
-                            Ok(n) => n,
-                            Err(e) => { return Err(e); },
-                        };
-                        minks.push(u);
-                    }
-                    Ok(f(minks))
-                },
-                None => { panic!("Operator found no operands") },
-            },
-            &Expression::Variable(ref v) => match vars.get(v) {
-                Some(val) => Ok(val.clone()),
-                None => Err(TreeError::create(TreeErrorKind::VarNotFound)),
-            },
-            &Expression::Constant(ref c) => Ok(c.clone()),
-        }
-    }
- 
+    
     /// Links the provided Vector of Trees as branches to self.
     pub fn link(&mut self, b: Vec<Tree<T>>) {
-        self.links = OptionVecWrapper::wrap(Some(b));
+        Rc::make_mut(&mut self.t).link(b);
     }
 
     /// Returns a reference to contained data.
     pub fn data(&self) -> &Expression<T> {
-        &self.data
+        &self.t.data()
     }
 
     /// Returns a reference to contained children.
     pub fn children(&self) -> &Option<Vec<Tree<T>>> {
-        &*self.links
+        &self.t.children()
     }
 
     /// Returns a TreePostIter for the tree.

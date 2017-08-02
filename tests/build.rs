@@ -27,7 +27,7 @@ fn test_treebuilder() {
     builder.set_prologue(TreeModuleLoader::prologue());
     builder.set_epilogue(TreeModuleLoader::epilogue());
 
-    let mut result = builder.use_box_and_name(Box::new(TreeModuleLoader.chain(BuiltinModuleLoader)), "tree")
+    let result = builder.use_box_and_name(Box::new(TreeModuleLoader.chain(BuiltinModuleLoader)), "tree")
         .expect("Failed to build tree.");
 
     assert_eq!(Some(&"x".to_string()), result.1.get("x"));
@@ -36,13 +36,10 @@ fn test_treebuilder() {
         println!("{:?}\n", i);
     }
 
-    result.0.reduce();
-
     let mut vars = HashMap::<String, f32>::with_capacity(1);
     vars.insert("x".to_string(), 2.0);
 
     assert_eq!(6.0, result.0.accumulate(&vars).unwrap());
-    assert_eq!(6.0, result.0.accumulate_recurse(&vars).unwrap());
 }
 
 type NumT = f32;
@@ -95,6 +92,7 @@ fn plus(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Result<Tree<NumT>, Error> {
     }
 
     let mut bt = Tree::new(Expression::Operator(int_plus));
+    // Tree wraps Rc, so clone is not expensive.
     bt.link(vec![lhs.clone(), rhs.clone()]);
     Ok(bt)
 }
@@ -106,6 +104,8 @@ fn mult(lhs: &Tree<NumT>, rhs: &Tree<NumT>) -> Result<Tree<NumT>, Error> {
     }
 
     let mut bt = Tree::new(Expression::Operator(int_mult));
+    // Just in case you didn't read the previous function, 
+    //  Tree wraps Rc, so clone is not expensive.
     bt.link(vec![lhs.clone(), rhs.clone()]);
     Ok(bt)
 }
