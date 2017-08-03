@@ -83,10 +83,8 @@ impl<'value, T: 'static + Sized + Clone + Debug> FromValueRef<'value> for &'valu
             if let Some(v) = fv.downcast_ref() {
                 return Ok(v);
             }
-         }
-
-        Err(
-            ExecError::expected("OptionVecWrapper", v))
+        }
+        Err(ExecError::expected("OptionVecWrapper", v))
     }
 }
 
@@ -212,10 +210,8 @@ impl<'value, T: 'static + Sized + Clone + Debug> FromValueRef<'value> for &'valu
             if let Some(v) = fv.downcast_ref() {
                 return Ok(v);
             }
-         }
-
-        Err(
-            ExecError::expected("RcWrapper", v))
+        }
+        Err(ExecError::expected("RcWrapper", v))
     }
 }
 
@@ -230,7 +226,7 @@ impl<T: 'static + Sized + Clone + Debug> Tree<T> {
     pub fn new(ex: Expression<T>) -> Tree<T> {
         Tree { t: RcWrapper::wrap(Rc::new(TreeBackend::new(ex))) }
     }
-    
+
     /// Evaluates the tree with the provided map of variables.
     ///
     /// 'vars' should be any HashMap that maps Variables in the tree to values.
@@ -254,9 +250,12 @@ impl<T: 'static + Sized + Clone + Debug> Tree<T> {
                 &Expression::Constant(ref c) => yeta.push(c.clone()),
             };
         }
-        Ok(yeta.pop().unwrap())
+        match yeta.pop() {
+            Some(r) => Ok(r),
+            None => { panic!("Accumulation failed unexpectedly"); },
+        }
     }
-    
+
     /// Links the provided Vector of Trees as branches to self.
     pub fn link(&mut self, b: Vec<Tree<T>>) {
         Rc::make_mut(&mut self.t).link(b);
