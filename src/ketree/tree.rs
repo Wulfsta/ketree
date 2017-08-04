@@ -107,7 +107,7 @@ impl<T: 'static + Clone + Debug> From<Expression<T>> for Value {
 }
 
 // A backend that represents a symbolic expression.
-#[derive(Clone, Debug, ForeignValue, FromValueClone, FromValueRef, StructValue)]
+#[derive(Clone, Debug, ForeignValue, FromValueClone, FromValueRef)]
 struct TreeBackend<T: 'static + Clone + Debug> {
     data: Expression<T>,
     links: OptionVecWrapper<Tree<T>>,
@@ -118,7 +118,7 @@ impl<T: 'static + Clone + Debug> TreeBackend<T> {
     fn new(ex: Expression<T>) -> TreeBackend<T> {
         TreeBackend { data: ex, links: OptionVecWrapper::<Tree<T>>::wrap(None) }
     }
-    
+ 
     // Links the provided Vector of Trees as branches to self.
     fn link(&mut self, b: Vec<Tree<T>>) {
         self.links = OptionVecWrapper::wrap(Some(b));
@@ -304,14 +304,11 @@ impl<'a, T: 'static + Clone + Debug> Iterator for TreePostIter<'a, T> {
     /// Returns a reference to the next vertex of the tree in post-order.
     fn next(&mut self) -> Option<&'a Tree<T>> {
         loop {
-            let minks = self.tree_stack[self.tree_stack.len() - 1].children();
-            let clen = || -> usize {
-                match minks {
+            let clen = match self.tree_stack[self.tree_stack.len() - 1].children() {
                     &Some(ref vc) => vc.len(),
                     &None => 0,
-                }
             };
-            if self.pos_stack[self.pos_stack.len() - 1] < clen() {
+            if self.pos_stack[self.pos_stack.len() - 1] < clen {
                 if let &Some(ref vc) = self.tree_stack[self.tree_stack.len() - 1].children() {
                     self.tree_stack.push(&vc[self.pos_stack[self.pos_stack.len() - 1]]);
                     self.pos_stack.push(0);
@@ -321,7 +318,7 @@ impl<'a, T: 'static + Clone + Debug> Iterator for TreePostIter<'a, T> {
                     panic!("Iteration failed unexpectedly");
                 }
             }
-            else if self.pos_stack[self.pos_stack.len() - 1] == clen() {
+            else if self.pos_stack[self.pos_stack.len() - 1] == clen {
                 let s = self.pos_stack.len() - 1;
                 self.pos_stack[s] += 1;
                 break;
