@@ -50,7 +50,7 @@ pub struct TreeModuleLoader;
 impl TreeModuleLoader {
     #[inline]
     pub fn prologue<'a>() -> &'a str {
-        "(use treebuilder :all)"
+        "(use treebuilder :all) \n"
     }
 
     #[inline]

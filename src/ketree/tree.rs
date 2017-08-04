@@ -63,7 +63,7 @@ impl<T: 'static + Sized + Clone + Debug> FromValue for OptionVecWrapper<T> {
                     Ok(v) => {
                         match Rc::try_unwrap(v) {
                             Ok(v) => Ok(v),
-                            Err(rc) => Ok((*rc).clone())
+                            Err(rc) => Ok((*rc).clone()),
                         }
                     }
                     Err(rc) => {
@@ -190,7 +190,7 @@ impl<T: 'static + Sized + Clone + Debug> FromValue for RcWrapper<T> {
                     Ok(v) => {
                         match Rc::try_unwrap(v) {
                             Ok(v) => Ok(v),
-                            Err(rc) => Ok((*rc).clone())
+                            Err(rc) => Ok((*rc).clone()),
                         }
                     }
                     Err(rc) => {
@@ -237,7 +237,7 @@ impl<T: 'static + Sized + Clone + Debug> Tree<T> {
                 &Expression::Operator(ref f) => {
                     let minks = match i.children() {
                         &Some(ref m) => m,
-                        &None => { panic!("Operator found no operands") },
+                        &None => { panic!("Operator found no operands"); },
                     };
                     let s = yeta.len() - minks.len();
                     let eta = yeta.split_off(s);
