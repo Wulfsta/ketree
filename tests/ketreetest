@@ -1,5 +1,5 @@
 (define x (var "x"))
 
 (define tree
-	(plus (plus x (mult (mult (con 1.0) (con 1.0)) x)) (mult (con 2.0) (con 1.0)))
+	(+ (+ x (* (* (con 1.0) (con 1.0)) x)) (* (con 2.0) (con 1.0)))
 )

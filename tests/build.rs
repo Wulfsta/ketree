@@ -28,7 +28,7 @@ fn test_treebuilder() {
     builder.set_epilogue(TreeModuleLoader::epilogue());
 
     let result = builder.use_box_and_name(Box::new(TreeModuleLoader.chain(BuiltinModuleLoader)), "tree")
-        .expect("Failed to build tree.");
+        .expect("Failed to build tree");
 
     assert_eq!(Some(&"x".to_string()), result.1.get("x"));
 
@@ -50,12 +50,14 @@ pub struct TreeModuleLoader;
 impl TreeModuleLoader {
     #[inline]
     pub fn prologue<'a>() -> &'a str {
-        "(use treebuilder :all) \n"
+        "\n
+        (use treebuilder :all) \n
+        (let ((+ plus) (* mult)) (do \n"
     }
 
     #[inline]
     pub fn epilogue<'a>() -> &'a str {
-        ""
+        "))"
     }
 }
 
