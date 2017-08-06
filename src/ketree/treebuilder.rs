@@ -7,10 +7,7 @@ use ketos::{
     FromValue,
 };
 use std::collections::HashSet;
-use std::io::prelude::*;
-use std::io::BufReader;
 use std::fmt::Debug;
-use std::fs::File;
 use std::rc::Rc;
 use std::cell::RefCell;
 use tree::{
@@ -23,45 +20,35 @@ use treeerror::{
 };
 
 /// Contains the code to be executed as a prologue, body, and epilogue.
-pub struct TreeBuilder {
-    kcode: String,
-    prologue: String,
-    epilogue: String,
+pub struct TreeBuilder<'a> {
+    kcode: &'a str,
+    prologue: &'a str,
+    epilogue: &'a str,
 }
 
-impl TreeBuilder {
+impl<'a> TreeBuilder<'a> {
     /// Creates a new TreeBuilder with provided 'body' code.
-    pub fn new(body: &str) -> TreeBuilder {
+    pub fn new(body: &'a str, pr: &'a str, ep: &'a str) -> TreeBuilder<'a> {
         TreeBuilder {
-            kcode: body.to_string(),
-            prologue: "".to_string(),
-            epilogue: "".to_string(),
+            kcode: body,
+            prologue: pr,
+            epilogue: ep,
         }
     }
 
-    /// Creates a new TreeBuilder from a file.
-    pub fn from_file(path: &str) -> Result<TreeBuilder, ::std::io::Error> {
-        let kf = File::open(path)?;
-        let mut reader = BufReader::new(kf);
-        let mut kfiledata = String::new();
-
-        reader.read_to_string(&mut kfiledata)?;
-
-        Ok(TreeBuilder {
-            kcode: kfiledata,
-            prologue: "".to_string(),
-            epilogue: "".to_string(),
-        })
+    /// Sets the body of code to be executed.
+    pub fn set_body(&mut self, s: &'a str) {
+        self.kcode = s;
     }
 
     /// Sets the prologue to be executed.
-    pub fn set_prologue(&mut self, s: &str) {
-        self.prologue = s.to_string();
+    pub fn set_prologue(&mut self, s: &'a str) {
+        self.prologue = s;
     }
 
     /// Sets the epilogue to be executed.
-    pub fn set_epilogue(&mut self, s: &str) {
-        self.epilogue = s.to_string();
+    pub fn set_epilogue(&mut self, s: &'a str) {
+        self.epilogue = s;
     }
 
     /// Consumes a Box containing a ketos::ModuleLoader and takes a name to look for that the tree

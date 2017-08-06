@@ -1,8 +1,10 @@
 #[macro_use] extern crate ketos;
 extern crate ketree;
 
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::fs::File;
 use std::collections::HashMap;
-use ketree::TreeBuilder;
 use ketos::{
     BuiltinModuleLoader,
     CompileError,
@@ -16,16 +18,21 @@ use ketos::{
 };
 use ketree::{
     Tree,
+    TreeBuilder,
     Expression,
 };
 
 #[test]
 fn test_treebuilder() {
-    let mut builder = TreeBuilder::from_file("tests/ketreetest")
-        .expect("Failed to create TreeBuilder");
+    let kf = File::open("tests/ketreetest")
+        .expect("Failed to find file");
+    let mut reader = BufReader::new(kf);
+    let mut kfiledata = String::new();
 
-    builder.set_prologue(TreeModuleLoader::prologue());
-    builder.set_epilogue(TreeModuleLoader::epilogue());
+    reader.read_to_string(&mut kfiledata)
+        .expect("Failed to read file");
+
+    let builder = TreeBuilder::new(&kfiledata, TreeModuleLoader::prologue(), TreeModuleLoader::epilogue());
 
     let result = builder.use_box_and_name(Box::new(TreeModuleLoader.chain(BuiltinModuleLoader)), "tree")
         .expect("Failed to build tree");

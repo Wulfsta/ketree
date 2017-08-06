@@ -1,6 +1,6 @@
 [package]
 name = "ketree"
-version = "0.4.4"
+version = "0.5.0"
 authors = ["Wulfsta <wulfstawulfsta@gmail.com>"]
 description = "A tree representing a symbolic expression that can be created with Ketos."
 license = "MIT/Apache-2.0"
