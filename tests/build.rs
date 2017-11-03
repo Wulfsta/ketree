@@ -39,9 +39,17 @@ fn test_treebuilder() {
 
     assert_eq!(Some(&"x".to_string()), result.1.get("x"));
 
+    let mut piter = result.0.post_iter();
+
     for i in result.0.post_iter() {
+        piter.next();
         println!("{:?}\n", i);
     }
+
+    match piter.next() {
+        Some(_) => panic!("Iterator returned value that was not None"),
+        None => {},
+    };
 
     let mut vars = HashMap::<String, f32>::with_capacity(1);
     vars.insert("x".to_string(), 2.0);
@@ -59,7 +67,7 @@ impl TreeModuleLoader {
     pub fn prologue<'a>() -> &'a str {
         "\n
         (use treebuilder :all) \n
-        (let ((+ plus) (* mult)) (do \n"
+        (let ((+ plus) (* mult) (f con)) (do \n"
     }
 
     #[inline]

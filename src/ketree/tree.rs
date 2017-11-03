@@ -302,12 +302,21 @@ impl<'a, T: 'static + Clone + Debug> Iterator for TreePostIter<'a, T> {
 
     // index magic
     /// Returns a reference to the next vertex of the tree in post-order.
+    /// This implementation of `next()` will continue returning `None` when called after
+    /// the completion of the iteration over the tree.
     fn next(&mut self) -> Option<&'a Tree<T>> {
         loop {
-            let clen = match self.tree_stack[self.tree_stack.len() - 1].children() {
-                    &Some(ref vc) => vc.len(),
-                    &None => 0,
-            };
+            let clen: usize;
+            {
+                let nbr = match self.tree_stack.last() {
+                    Some(tr) => tr,
+                    None => return None,
+                };
+                clen = match nbr.children() {
+                        &Some(ref vc) => vc.len(),
+                        &None => 0,
+                };
+            }
             if self.pos_stack[self.pos_stack.len() - 1] < clen {
                 if let &Some(ref vc) = self.tree_stack[self.tree_stack.len() - 1].children() {
                     self.tree_stack.push(&vc[self.pos_stack[self.pos_stack.len() - 1]]);
