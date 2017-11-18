@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::mem;
 use tree::{
     Tree,
     Expression,
@@ -105,7 +106,7 @@ impl<'a> TreeBuilder<'a> {
                 None => { return Err(Error::custom(TreeError::create(TreeErrorKind::TreeNotInScope))); },
             })?;
 
-            result = (m, varcont.borrow().clone());
+            result = (m, mem::replace(&mut varcont.borrow_mut(), HashSet::<String>::with_capacity(0)));
         }
         Ok(result)
     }
